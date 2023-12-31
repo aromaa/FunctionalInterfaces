@@ -22,7 +22,7 @@ public sealed class ModuleWeaver : BaseModuleWeaver
 				{
 					if (bodyInstruction.OpCode == OpCodes.Call)
 					{
-						if (bodyInstruction.Operand is MethodDefinition target)
+						if (bodyInstruction.Operand is MethodReference target)
 						{
 							(MethodReference? candidate, Dictionary<int, MethodReference> functionalInterfaces) = this.FindFunctionalInterfaceTarget(target);
 							if (candidate is null)
@@ -50,7 +50,8 @@ public sealed class ModuleWeaver : BaseModuleWeaver
 		for (int i = 0; i < target.Parameters.Count; i++)
 		{
 			ParameterDefinition parameter = target.Parameters[i];
-			if (parameter.ParameterType.FullName == "System.Action")
+			if (parameter.ParameterType.FullName.StartsWith("System.Action")
+				|| parameter.ParameterType.FullName.StartsWith("System.Func"))
 			{
 				candidateParams.Add(i);
 			}
@@ -101,9 +102,20 @@ public sealed class ModuleWeaver : BaseModuleWeaver
 					targetCandidate = current;
 				}
 
-				for (int j = 0; j < targetCandidate.Parameters.Count; j++)
+				if (target.Parameters[i].ParameterType is GenericInstanceType targetDelegate)
 				{
-					//Matches delegate
+					if (targetDelegate.GenericArguments.Count < targetCandidate.Parameters.Count)
+					{
+						goto CONTINUE;
+					}
+
+					for (int j = 0; j < targetCandidate.Parameters.Count; j++)
+					{
+						if (targetDelegate.GenericArguments[j] != targetCandidate.Parameters[j].ParameterType)
+						{
+							goto CONTINUE;
+						}
+					}
 				}
 
 				functionalInterfaces.Add(i, targetCandidate);
@@ -197,6 +209,16 @@ public sealed class ModuleWeaver : BaseModuleWeaver
 
 			MethodDefinition method = new(functionalInterfaceTarget.Name, MethodAttributes.Public | MethodAttributes.Virtual, functionalInterfaceTarget.ReturnType);
 			type.Methods.Add(method);
+
+			foreach (ParameterDefinition parameter in ((MethodDefinition)instruction.Previous.Operand).Parameters)
+			{
+				method.Parameters.Add(parameter);
+			}
+
+			foreach (VariableDefinition variableDefinition in ((MethodDefinition)instruction.Previous.Operand).Body.Variables)
+			{
+				method.Body.Variables.Add(variableDefinition);
+			}
 
 			VariableDefinition variable = new(type);
 

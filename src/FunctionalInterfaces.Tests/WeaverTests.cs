@@ -18,9 +18,16 @@ public class WeaverTests
 
 	[Theory]
 	[MemberData(nameof(WeaverTests.GetStaticMethods), parameters: typeof(ActionTests))]
-	public void Test(string methodName)
+	public void TestActions(string methodName)
 	{
 		WeaverTests.CreateDelegate<Action>(typeof(ActionTests), methodName)();
+	}
+
+	[Theory]
+	[MemberData(nameof(WeaverTests.GetStaticMethods), parameters: typeof(FuncTests))]
+	public void TestFuncs(string methodName)
+	{
+		WeaverTests.CreateDelegate<Action>(typeof(FuncTests), methodName)();
 	}
 
 	private static T CreateDelegate<T>(Type type, string methodName)
