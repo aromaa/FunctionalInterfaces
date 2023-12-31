@@ -1,0 +1,7 @@
+* text=auto
+
+*.jpg binary
+*.png binary
+*.gif binary
+
+*.cs text=auto diff=csharp
