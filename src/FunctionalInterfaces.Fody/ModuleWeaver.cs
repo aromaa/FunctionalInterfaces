@@ -292,7 +292,7 @@ public sealed class ModuleWeaver : BaseModuleWeaver
 							CopyMethod((MethodDefinition)callMethod, callTarget);
 						}
 
-						destinationMethod.Body.Instructions.Add(Instruction.Create(lambdaInstruction.OpCode, type.DeclaringType.GenericParameters.Count == 0
+						callMethod = type.DeclaringType.GenericParameters.Count == 0
 							? callMethod
 							: new GenericInstanceMethod(this.ModuleDefinition.ImportReference(callMethod))
 							{
@@ -300,7 +300,9 @@ public sealed class ModuleWeaver : BaseModuleWeaver
 								{
 									genericType
 								}
-							}));
+							};
+
+						destinationMethod.Body.Instructions.Add(Instruction.Create(lambdaInstruction.OpCode, callMethod));
 					}
 					else
 					{
