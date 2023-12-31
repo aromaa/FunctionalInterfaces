@@ -67,10 +67,6 @@ public static class FuncTests
 		return action.Invoke(3, 6);
 	}
 
-	private static int Invoke(Func<int> action) => throw new NotSupportedException();
-	private static int InvokeT1(Func<int, int> action) => throw new NotSupportedException();
-	private static int InvokeT2(Func<int, int, int> action) => throw new NotSupportedException();
-
 	private interface IAction
 	{
 		public int Invoke();
@@ -85,4 +81,8 @@ public static class FuncTests
 	{
 		public int Invoke(int x, int y);
 	}
+
+	private static int Invoke(Func<int> action) => throw new NotSupportedException();
+	private static int InvokeT1(Func<int, int> action) => throw new NotSupportedException();
+	private static int InvokeT2(Func<int, int, int> action) => throw new NotSupportedException();
 }

@@ -9,38 +9,52 @@ public sealed class ModuleWeaver : BaseModuleWeaver
 {
 	public override void Execute()
 	{
-		foreach (TypeDefinition moduleDefinitionType in this.ModuleDefinition.Types)
+		foreach (TypeDefinition type in this.ModuleDefinition.Types)
 		{
-			foreach (MethodDefinition methodDefinition in moduleDefinitionType.Methods)
+			this.ProcessType(type);
+		}
+	}
+
+	private void ProcessType(TypeDefinition type)
+	{
+		foreach (MethodDefinition methodDefinition in type.Methods)
+		{
+			if (!methodDefinition.HasBody)
 			{
-				if (!methodDefinition.HasBody)
+				continue;
+			}
+
+			foreach (Instruction bodyInstruction in methodDefinition.Body.Instructions.ToList())
+			{
+				if (bodyInstruction.OpCode != OpCodes.Call && bodyInstruction.OpCode != OpCodes.Callvirt)
 				{
 					continue;
 				}
 
-				foreach (Instruction bodyInstruction in methodDefinition.Body.Instructions.ToList())
+				if (bodyInstruction.Operand is not MethodReference target)
 				{
-					if (bodyInstruction.OpCode == OpCodes.Call)
-					{
-						if (bodyInstruction.Operand is MethodReference target)
-						{
-							(MethodReference? candidate, Dictionary<int, MethodReference> functionalInterfaces) = this.FindFunctionalInterfaceTarget(target);
-							if (candidate is null)
-							{
-								continue;
-							}
-
-							Dictionary<int, Instruction>? functionalInterfaceCandidates = this.ScanFunctionInterfaceCandidate(bodyInstruction, functionalInterfaces);
-							if (functionalInterfaceCandidates is null)
-							{
-								continue;
-							}
-
-							this.ConvertToFunctionalInterface(methodDefinition.Body, bodyInstruction, candidate, functionalInterfaces, functionalInterfaceCandidates);
-						}
-					}
+					continue;
 				}
+
+				(MethodReference? candidate, Dictionary<int, MethodReference> functionalInterfaces) = this.FindFunctionalInterfaceTarget(target);
+				if (candidate is null)
+				{
+					continue;
+				}
+
+				Dictionary<int, Instruction>? functionalInterfaceCandidates = this.ScanFunctionInterfaceCandidate(bodyInstruction, functionalInterfaces);
+				if (functionalInterfaceCandidates is null)
+				{
+					continue;
+				}
+
+				this.ConvertToFunctionalInterface(methodDefinition.Body, bodyInstruction, candidate, functionalInterfaces, functionalInterfaceCandidates);
 			}
+		}
+
+		foreach (TypeDefinition nestedType in type.NestedTypes.ToList())
+		{
+			this.ProcessType(nestedType);
 		}
 	}
 
@@ -62,7 +76,13 @@ public sealed class ModuleWeaver : BaseModuleWeaver
 			return (null, new Dictionary<int, MethodReference>());
 		}
 
-		foreach (MethodDefinition candidate in target.DeclaringType.Resolve().Methods
+		TypeDefinition targetType = target.DeclaringType.Resolve();
+		if (targetType is null)
+		{
+			return (null, new Dictionary<int, MethodReference>());
+		}
+
+		foreach (MethodDefinition candidate in targetType.Methods
 					 .Where(m => m != target && m.HasGenericParameters && m.Parameters.Count == target.Parameters.Count && m.Name == target.Name))
 		{
 			for (int i = 0; i < candidate.Parameters.Count; i++)
@@ -71,7 +91,7 @@ public sealed class ModuleWeaver : BaseModuleWeaver
 				TypeReference parameterType = parameter.ParameterType;
 				if (!candidateParams.Contains(i))
 				{
-					if (parameterType != target.Parameters[i].ParameterType)
+					if (parameterType.Resolve() != target.Parameters[i].ParameterType.Resolve())
 					{
 						goto CONTINUE;
 					}
@@ -111,7 +131,7 @@ public sealed class ModuleWeaver : BaseModuleWeaver
 
 					for (int j = 0; j < targetCandidate.Parameters.Count; j++)
 					{
-						if (targetDelegate.GenericArguments[j] != targetCandidate.Parameters[j].ParameterType)
+						if (targetDelegate.GenericArguments[j].Resolve() != targetCandidate.Parameters[j].ParameterType.Resolve())
 						{
 							goto CONTINUE;
 						}
@@ -192,55 +212,108 @@ public sealed class ModuleWeaver : BaseModuleWeaver
 				current = this.WalkStack(current, toRemove.Add).Previous;
 			}
 
-			VariableDefinition originalVariable = (VariableDefinition)current.Operand;
+			if (current.Operand is not VariableDefinition originalVariable)
+			{
+				body.Optimize();
 
-			TypeDefinition nestedType = originalVariable.VariableType.DeclaringType.Resolve();
+				return;
+			}
 
-			TypeDefinition type = new(originalVariable.VariableType.Namespace, $"{originalVariable.VariableType.Name}_FunctionalInterface_{nestedType.NestedTypes.Count}", TypeAttributes.NestedPrivate | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit, this.ModuleDefinition.ImportReference(this.FindTypeDefinition("System.ValueType")));
+			MethodDefinition lambdaMethod = ((MethodReference)instruction.Previous.Operand).Resolve();
 
-			nestedType.NestedTypes.Add(type);
+			TypeDefinition type = new(lambdaMethod.DeclaringType.Namespace, $"{lambdaMethod.DeclaringType.Name}_FunctionalInterface_{lambdaMethod.DeclaringType.NestedTypes.Count}", TypeAttributes.NestedPrivate | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit, this.ModuleDefinition.ImportReference(this.FindTypeDefinition("System.ValueType")));
 
-			type.Interfaces.Add(new InterfaceImplementation(functionalInterfaceTarget.DeclaringType));
+			lambdaMethod.DeclaringType.DeclaringType.NestedTypes.Add(type);
 
-			foreach (FieldDefinition declaringTypeField in ((MethodDefinition)instruction.Previous.Operand).DeclaringType.Fields)
+			type.Interfaces.Add(new InterfaceImplementation(this.ModuleDefinition.ImportReference(functionalInterfaceTarget.DeclaringType)));
+
+			foreach (FieldDefinition declaringTypeField in lambdaMethod.DeclaringType.Fields)
 			{
 				type.Fields.Add(new FieldDefinition(declaringTypeField.Name, declaringTypeField.Attributes, declaringTypeField.FieldType));
 			}
 
-			MethodDefinition method = new(functionalInterfaceTarget.Name, MethodAttributes.Public | MethodAttributes.Virtual, functionalInterfaceTarget.ReturnType);
+			foreach (GenericParameter genericParameter in lambdaMethod.DeclaringType.GenericParameters)
+			{
+				GenericParameter newGenericParameter = new(genericParameter.Name, genericParameter.Owner)
+				{
+					Attributes = genericParameter.Attributes
+				};
+
+				foreach (GenericParameterConstraint constraint in genericParameter.Constraints)
+				{
+					newGenericParameter.Constraints.Add(constraint);
+				}
+
+				type.GenericParameters.Add(newGenericParameter);
+			}
+
+			MethodDefinition method = new(functionalInterfaceTarget.Name, MethodAttributes.Public | MethodAttributes.Virtual, this.ModuleDefinition.ImportReference(functionalInterfaceTarget.ReturnType));
+
 			type.Methods.Add(method);
 
-			foreach (ParameterDefinition parameter in ((MethodDefinition)instruction.Previous.Operand).Parameters)
-			{
-				method.Parameters.Add(parameter);
-			}
+			TypeReference genericType = type.DeclaringType.GenericParameters.Count == 0
+				? type
+				: type.MakeGenericInstanceType(type.DeclaringType.GenericParameters.ToArray());
 
-			foreach (VariableDefinition variableDefinition in ((MethodDefinition)instruction.Previous.Operand).Body.Variables)
-			{
-				method.Body.Variables.Add(variableDefinition);
-			}
-
-			VariableDefinition variable = new(type);
+			VariableDefinition variable = new(genericType);
 
 			body.Variables.Add(variable);
 
-			foreach (Instruction lambdaInstruction in ((MethodDefinition)instruction.Previous.Operand).Body.Instructions)
+			CopyMethod(method, lambdaMethod);
+
+			void CopyMethod(MethodDefinition destinationMethod, MethodDefinition copyMethod)
 			{
-				if (lambdaInstruction.OpCode == OpCodes.Ldfld)
+				foreach (ParameterDefinition parameter in copyMethod.Parameters)
 				{
-					method.Body.Instructions.Add(Instruction.Create(lambdaInstruction.OpCode, type.Fields.Single(f => f.Name == ((FieldReference)lambdaInstruction.Operand).Name)));
+					destinationMethod.Parameters.Add(parameter);
 				}
-				else
+
+				foreach (VariableDefinition variableDefinition in copyMethod.Body.Variables)
 				{
-					method.Body.Instructions.Add(lambdaInstruction);
+					destinationMethod.Body.Variables.Add(variableDefinition);
+				}
+
+				foreach (Instruction lambdaInstruction in copyMethod.Body.Instructions)
+				{
+					if (lambdaInstruction.OpCode == OpCodes.Ldfld && ((FieldReference)lambdaInstruction.Operand).DeclaringType.Resolve() == originalVariable.VariableType.Resolve())
+					{
+						destinationMethod.Body.Instructions.Add(Instruction.Create(lambdaInstruction.OpCode, type.Fields.Single(f => f.Name == ((FieldReference)lambdaInstruction.Operand).Name)));
+					}
+					else if (lambdaInstruction.OpCode == OpCodes.Call && ((MethodReference)lambdaInstruction.Operand).DeclaringType.Resolve() == originalVariable.VariableType.Resolve())
+					{
+						MethodDefinition callTarget = ((MethodReference)lambdaInstruction.Operand).Resolve();
+						MethodReference? callMethod = type.Methods.FirstOrDefault(f => f.Name == ((MethodReference)lambdaInstruction.Operand).Name);
+						if (callMethod == null)
+						{
+							callMethod = new MethodDefinition(callTarget.Name, MethodAttributes.Private, this.ModuleDefinition.ImportReference(callTarget.ReturnType));
+
+							type.Methods.Add((MethodDefinition)callMethod);
+
+							CopyMethod((MethodDefinition)callMethod, callTarget);
+						}
+
+						destinationMethod.Body.Instructions.Add(Instruction.Create(lambdaInstruction.OpCode, type.DeclaringType.GenericParameters.Count == 0
+							? callMethod
+							: new GenericInstanceMethod(this.ModuleDefinition.ImportReference(callMethod))
+							{
+								GenericArguments =
+								{
+									genericType
+								}
+							}));
+					}
+					else
+					{
+						destinationMethod.Body.Instructions.Add(lambdaInstruction);
+					}
 				}
 			}
 
-			callInstruction.Operand = new GenericInstanceMethod(candidate)
+			callInstruction.Operand = new GenericInstanceMethod(this.ModuleDefinition.ImportReference(candidate))
 			{
 				GenericArguments =
 				{
-					type
+					genericType
 				}
 			};
 
@@ -256,9 +329,9 @@ public sealed class ModuleWeaver : BaseModuleWeaver
 						i.OpCode = OpCodes.Ldloca;
 						i.Operand = variable;
 					}
-					else if (i.OpCode == OpCodes.Stfld && ((FieldDefinition)i.Operand).DeclaringType == originalVariable.VariableType)
+					else if (i.OpCode == OpCodes.Stfld && ((FieldReference)i.Operand).DeclaringType.Resolve() == originalVariable.VariableType.Resolve())
 					{
-						i.Operand = type.Fields.Single(f => f.Name == ((FieldReference)i.Operand).Name);
+						i.Operand = new FieldReference(((FieldReference)i.Operand).Name, ((FieldReference)i.Operand).FieldType, genericType);
 					}
 				}).Previous;
 
