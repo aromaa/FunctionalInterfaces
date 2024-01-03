@@ -8,11 +8,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FunctionalInterfaces", "src
 		{9AE9C73D-B2BC-4028-BB2B-69B2B0B719B6} = {9AE9C73D-B2BC-4028-BB2B-69B2B0B719B6}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FunctionalInterfaces.Fody", "src\FunctionalInterfaces.Fody\FunctionalInterfaces.Fody.csproj", "{9AE9C73D-B2BC-4028-BB2B-69B2B0B719B6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FunctionalInterfaces.Fody", "src\FunctionalInterfaces.Fody\FunctionalInterfaces.Fody.csproj", "{9AE9C73D-B2BC-4028-BB2B-69B2B0B719B6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FunctionalInterfaces.Tests", "src\FunctionalInterfaces.Tests\FunctionalInterfaces.Tests.csproj", "{9BD33EC9-81CD-4E05-BED3-D1E65E84E998}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FunctionalInterfaces.Tests", "src\FunctionalInterfaces.Tests\FunctionalInterfaces.Tests.csproj", "{9BD33EC9-81CD-4E05-BED3-D1E65E84E998}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FunctionalInterfaces.TestAssembly", "src\FunctionalInterfaces.TestAssembly\FunctionalInterfaces.TestAssembly.csproj", "{B97825E0-4012-47DC-B84E-081AC48168B4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FunctionalInterfaces.TestAssembly", "src\FunctionalInterfaces.TestAssembly\FunctionalInterfaces.TestAssembly.csproj", "{B97825E0-4012-47DC-B84E-081AC48168B4}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FunctionalInterfaces.SourceGenerator", "src\FunctionalInterfaces.SourceGenerator\FunctionalInterfaces.SourceGenerator.csproj", "{07E5F22D-DFE1-498D-A921-3D2F8AF6A9CC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -36,6 +38,10 @@ Global
 		{B97825E0-4012-47DC-B84E-081AC48168B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B97825E0-4012-47DC-B84E-081AC48168B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B97825E0-4012-47DC-B84E-081AC48168B4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{07E5F22D-DFE1-498D-A921-3D2F8AF6A9CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{07E5F22D-DFE1-498D-A921-3D2F8AF6A9CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{07E5F22D-DFE1-498D-A921-3D2F8AF6A9CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{07E5F22D-DFE1-498D-A921-3D2F8AF6A9CC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

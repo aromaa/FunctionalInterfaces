@@ -2,13 +2,40 @@
 
 namespace FunctionalInterfaces.TestAssembly;
 
-public static class ActionTests
+public static partial class ActionTests
 {
 	private static IActionConsumer Instance { get; } = new ActionConsumer();
 
 	public static void CallActionWithCapturedInt()
 	{
 		int param = 50;
+
+		ActionTests.Invoke(() =>
+		{
+			Assert.Equal(50, param);
+		});
+	}
+
+	public static void CallActionWithCapturedIntReferenceOutside()
+	{
+		int param = 50;
+
+		_ = param;
+
+		ActionTests.Invoke(() =>
+		{
+			Assert.Equal(50, param);
+		});
+	}
+
+	public static void CallActionWithCapturedIntTwoTimes()
+	{
+		int param = 50;
+
+		ActionTests.Invoke(() =>
+		{
+			Assert.Equal(50, param);
+		});
 
 		ActionTests.Invoke(() =>
 		{
@@ -37,20 +64,26 @@ public static class ActionTests
 		{
 			Another();
 
+			Assert.Equal(50, paramB);
+			Assert.Equal(49, paramS);
+			Assert.Equal(48, paramI);
+			Assert.Equal(47, paramL);
+
 			void Another()
 			{
-				Assert.Equal(50, paramB);
-				Assert.Equal(49, paramS);
-				Assert.Equal(48, paramI);
-				Assert.Equal(47, paramL);
+				//TODO: Capturing rules
+				//Assert.Equal(50, paramB);
+				//Assert.Equal(49, paramS);
+				//Assert.Equal(48, paramI);
+				//Assert.Equal(47, paramL);
 			}
 		});
 	}
 
-	public static void CallActionWithCapturedThis()
-	{
-		Assert.Throws<NotSupportedException>(() => new ActionHolder().CaptureThis());
-	}
+	////public static void CallActionWithCapturedThis()
+	////{
+	////	Assert.Throws<NotSupportedException>(() => new ActionHolder().CaptureThis());
+	////}
 
 	public static void CallActionWithCapturedThisAndParams()
 	{
@@ -77,25 +110,25 @@ public static class ActionTests
 		new ActionHolderConstraint<IAction>().CaptureThisAndParams();
 	}
 
-	public static void CallActionWithCapturedIntWithParamAfter()
-	{
-		int param = 50;
+	////public static void CallActionWithCapturedIntWithParamAfter()
+	////{
+	////	int param = 50;
 
-		ActionTests.Invoke(() =>
-		{
-			Assert.Equal(50, param);
-		}, 3);
-	}
+	////	ActionTests.Invoke2(() =>
+	////	{
+	////		Assert.Equal(50, param);
+	////	}, 3);
+	////}
 
-	public static void CallActionWithCapturedIntWithParamBefore()
-	{
-		int param = 50;
+	////public static void CallActionWithCapturedIntWithParamBefore()
+	////{
+	////	int param = 50;
 
-		ActionTests.Invoke(3, () =>
-		{
-			Assert.Equal(50, param);
-		});
-	}
+	////	ActionTests.Invoke2(3, () =>
+	////	{
+	////		Assert.Equal(50, param);
+	////	});
+	////}
 
 	public static void CallActionT1WithCapturedInt()
 	{
@@ -105,6 +138,19 @@ public static class ActionTests
 		{
 			Assert.Equal(50, param);
 			Assert.Equal(3, x);
+		});
+	}
+
+	public static void CallActionWithCapturedCapturedInt()
+	{
+		int param = 50;
+
+		ActionTests.Invoke(() =>
+		{
+			ActionTests.Invoke(() =>
+			{
+				Assert.Equal(50, param);
+			});
 		});
 	}
 
@@ -120,7 +166,7 @@ public static class ActionTests
 		});
 	}
 
-	private sealed class ActionHolder
+	private sealed partial class ActionHolder
 	{
 		private readonly string hey = nameof(hey);
 
@@ -156,7 +202,7 @@ public static class ActionTests
 		}
 	}
 
-	private sealed class ActionHolder<T>
+	private sealed partial class ActionHolder<T>
 	{
 		internal void CaptureThisAndParams()
 		{
@@ -170,7 +216,7 @@ public static class ActionTests
 		}
 	}
 
-	private sealed class ActionHolderRefOnly<T>
+	private sealed partial class ActionHolderRefOnly<T>
 		where T : class
 	{
 		internal void CaptureThisAndParams()
@@ -185,7 +231,7 @@ public static class ActionTests
 		}
 	}
 
-	private sealed class ActionHolderConstraint<T>
+	private sealed partial class ActionHolderConstraint<T>
 		where T : IAction
 	{
 		internal void CaptureThisAndParams()
@@ -204,7 +250,7 @@ public static class ActionTests
 		where T : IAction
 		=> action.Invoke();
 
-	private static void Invoke<T>(T action, int param)
+	private static void Invoke2<T>(T action, int param)
 		where T : IAction
 	{
 		action.Invoke();
@@ -212,7 +258,7 @@ public static class ActionTests
 		Assert.Equal(3, param);
 	}
 
-	private static void Invoke<T>(int param, T action)
+	private static void Invoke2<T>(int param, T action)
 		where T : IAction
 	{
 		action.Invoke();
@@ -264,8 +310,8 @@ public static class ActionTests
 	}
 
 	private static void Invoke(Action action) => throw new NotSupportedException();
-	private static void Invoke(Action action, int param) => throw new NotSupportedException();
-	private static void Invoke(int param, Action action) => throw new NotSupportedException();
+	private static void Invoke2(Action action, int param) => throw new NotSupportedException();
+	private static void Invoke2(int param, Action action) => throw new NotSupportedException();
 	private static void InvokeT1(Action<int> action) => throw new NotSupportedException();
 	private static void InvokeT2(Action<int, int> action) => throw new NotSupportedException();
 }

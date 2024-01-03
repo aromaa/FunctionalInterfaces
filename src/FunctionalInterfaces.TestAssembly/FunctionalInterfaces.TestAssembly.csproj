@@ -10,6 +10,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\FunctionalInterfaces.SourceGenerator\FunctionalInterfaces.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 		<ProjectReference Include="..\FunctionalInterfaces\FunctionalInterfaces.csproj" />
 	</ItemGroup>
 

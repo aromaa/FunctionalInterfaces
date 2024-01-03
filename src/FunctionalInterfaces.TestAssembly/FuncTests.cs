@@ -2,7 +2,7 @@
 
 namespace FunctionalInterfaces.TestAssembly;
 
-public static class FuncTests
+public static partial class FuncTests
 {
 	public static void CallFuncWithCapturedInt()
 	{
