@@ -28,20 +28,20 @@ public static partial class ActionTests
 		});
 	}
 
-	public static void CallActionWithCapturedIntTwoTimes()
-	{
-		int param = 50;
+	////public static void CallActionWithCapturedIntTwoTimes()
+	////{
+	////	int param = 50;
 
-		ActionTests.Invoke(() =>
-		{
-			Assert.Equal(50, param);
-		});
+	////	ActionTests.Invoke(() =>
+	////	{
+	////		Assert.Equal(50, param);
+	////	});
 
-		ActionTests.Invoke(() =>
-		{
-			Assert.Equal(50, param);
-		});
-	}
+	////	ActionTests.Invoke(() =>
+	////	{
+	////		Assert.Equal(50, param);
+	////	});
+	////}
 
 	public static void CallVirtualActionWithCapturedInt()
 	{

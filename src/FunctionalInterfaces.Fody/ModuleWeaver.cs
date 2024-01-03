@@ -24,9 +24,9 @@ public sealed class ModuleWeaver : BaseModuleWeaver
 
 			//TODO: Attribute?
 
-			string identifierName = method.Name + "_FunctionalInterface_";
+			string identifierName = method.Name + "_FunctionalInterface";
 
-			MethodDefinition? functionalInterface = type.Methods.FirstOrDefault(m => m.Name.StartsWith(identifierName));
+			MethodDefinition? functionalInterface = type.Methods.FirstOrDefault(m => m.Name == identifierName);
 			if (functionalInterface is not null)
 			{
 				method.Body = functionalInterface.Body;

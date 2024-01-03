@@ -226,7 +226,14 @@ public sealed class FunctionalInterfacesGenerator : IIncrementalGenerator
 						}
 						else if (symbol is IParameterSymbol param)
 						{
-							writer.WriteLine($"public {param.Type} _{param.Name};");
+							if (param.Name == "this")
+							{
+								writer.WriteLine($"public {param.Type} _{param.Name};");
+							}
+							else
+							{
+								writer.WriteLine($"public {param.Type} {param.Name};");
+							}
 						}
 					}
 				}
@@ -316,7 +323,9 @@ public sealed class FunctionalInterfacesGenerator : IIncrementalGenerator
 					IMethodSymbol? methodSymbolInfo = semanticModel.GetDeclaredSymbol(declaringMethod);
 					if (methodSymbolInfo is not null)
 					{
-						SyntaxNode declaringMethodBody = declaringMethod.Body!.ReplaceNodes(declaringMethod.Body!.DescendantNodes(), (original, modified) =>
+						SyntaxNode declaringMethodBody = declaringMethod.Body!;
+
+						declaringMethodBody = declaringMethodBody.ReplaceNodes(declaringMethodBody.DescendantNodes(), (original, modified) =>
 						{
 							if (modified is InvocationExpressionSyntax inv)
 							{
@@ -357,8 +366,45 @@ public sealed class FunctionalInterfacesGenerator : IIncrementalGenerator
 							return modified;
 						});
 
+						foreach (SyntaxNode descendantNode in declaringMethodBody.DescendantNodes())
+						{
+							if (descendantNode is InvocationExpressionSyntax inv && inv.ArgumentList.Arguments
+									.Any(a => a.Expression is InvocationExpressionSyntax { ArgumentList.Arguments.Count: 1 } exp
+											  && exp.ArgumentList.Arguments[0].Expression is IdentifierNameSyntax { Identifier.Text: "__functionalInterface" }))
+							{
+								if (dataFlowAnalysis is not null && inv.Parent is ExpressionStatementSyntax expression)
+								{
+									List<ExpressionStatementSyntax> initVariables = new();
+									foreach (ISymbol symbol in dataFlowAnalysis.DataFlowsIn)
+									{
+										foreach (SyntaxReference reference in symbol.DeclaringSyntaxReferences)
+										{
+											SyntaxNode declaration = reference.GetSyntax();
+											if (declaration is VariableDeclaratorSyntax)
+											{
+												continue;
+											}
+
+											initVariables.Add(SyntaxFactory.ExpressionStatement(
+												SyntaxFactory.AssignmentExpression(
+													SyntaxKind.SimpleAssignmentExpression,
+													SyntaxFactory.MemberAccessExpression(
+														SyntaxKind.SimpleMemberAccessExpression,
+														SyntaxFactory.IdentifierName("__functionalInterface"),
+														SyntaxFactory.IdentifierName(symbol.Name)),
+													SyntaxFactory.IdentifierName(symbol.Name))));
+										}
+									}
+
+									declaringMethodBody = declaringMethodBody.InsertNodesBefore(expression, initVariables);
+
+									break;
+								}
+							}
+						}
+
 						writer.WriteLine();
-						writer.WriteLine($"public {(methodSymbolInfo.IsStatic ? "static " : string.Empty)}{methodSymbolInfo.ReturnType} {methodSymbolInfo.Name}_FunctionalInterface_{lambda.Span.Start}({string.Join(", ", methodSymbolInfo.Parameters)})");
+						writer.WriteLine($"private {(methodSymbolInfo.IsStatic ? "static " : string.Empty)}{methodSymbolInfo.ReturnType} {methodSymbolInfo.Name}_FunctionalInterface({string.Join(", ", methodSymbolInfo.Parameters)})");
 						writer.WriteLine("{");
 						writer.Indent++;
 
