@@ -6,20 +6,20 @@ Allows lambdas to implement interfaces and to target generic methods to create z
 ```csharp
 interface IAction
 {
-    //Single method the lambda can implement
+	//Single method the lambda can implement
 	void Invoke();
 }
 
 static class Consumer
 {
-    //The actual lambda target, generic to allow struct specialization
+	//The actual lambda target, generic to allow struct specialization
 	static void Run<T>(T action)
 		where T : IAction //Generic constraint to specify the interface
 	{
 		action.Invoke();
 	}
 
-    //C# doesn't support the syntax so use dummy method
+	//C# doesn't support the syntax so use dummy method
 	static void Run(Action a) => a(); //Or you can throw to catch any problems
 }
 
@@ -30,14 +30,14 @@ static partial class Sample
 	{
 		int param = 10;
 
-        //Targets actually Consumer.Run<T>
+		//Targets actually Consumer.Run<T>
 		Consumer.Run(() =>
 		{
 			Console.WriteLine($"First: {param}");
 
 			param = 20;
 
-            //Targets actually Consumer.Run<T>
+			//Targets actually Consumer.Run<T>
 			Consumer.Run(() =>
 			{
 				Console.WriteLine($"Second: {param}");
