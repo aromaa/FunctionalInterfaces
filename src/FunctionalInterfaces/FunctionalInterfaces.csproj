@@ -3,11 +3,33 @@
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<LangVersion>12</LangVersion>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<NoPackageAnalysis>true</NoPackageAnalysis>
+		<DisableFody>true</DisableFody>
+		<Version>1.0.0</Version>
+		<Authors>Joni Aromaa</Authors>
+		<Description>
+			Create zero allocation capturing struct lambdas!
+		</Description>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Fody" Version="6.8.0" PrivateAssets="None" />
-		<PackageReference Include="FodyPackaging" Version="6.8.0" PrivateAssets="All" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\FunctionalInterfaces.Fody\FunctionalInterfaces.Fody.csproj" PrivateAssets="All" />
+	  <ProjectReference Include="..\FunctionalInterfaces.SourceGenerator\FunctionalInterfaces.SourceGenerator.csproj" PrivateAssets="All" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="$(OutputPath)\FunctionalInterfaces.Fody.dll" Pack="true" PackagePath="weaver/FunctionalInterfaces.dll" Visible="false" />
+		<None Include="$(OutputPath)\FunctionalInterfaces.SourceGenerator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="FunctionalInterfaces.props" Pack="true" PackagePath="build" />
 	</ItemGroup>
 
 </Project>

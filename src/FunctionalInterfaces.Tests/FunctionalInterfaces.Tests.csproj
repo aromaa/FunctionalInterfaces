@@ -28,7 +28,6 @@
 	<ItemGroup>
 		<ProjectReference Include="..\FunctionalInterfaces.Fody\FunctionalInterfaces.Fody.csproj" />
 		<ProjectReference Include="..\FunctionalInterfaces.TestAssembly\FunctionalInterfaces.TestAssembly.csproj" />
-		<ProjectReference Include="..\FunctionalInterfaces\FunctionalInterfaces.csproj" />
 	</ItemGroup>
 
 </Project>
