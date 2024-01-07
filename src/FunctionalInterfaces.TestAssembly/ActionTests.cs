@@ -28,20 +28,20 @@ public static partial class ActionTests
 		});
 	}
 
-	////public static void CallActionWithCapturedIntTwoTimes()
-	////{
-	////	int param = 50;
+	public static void CallActionWithCapturedIntTwoTimes()
+	{
+		int param = 50;
 
-	////	ActionTests.Invoke(() =>
-	////	{
-	////		Assert.Equal(50, param);
-	////	});
+		ActionTests.Invoke(() =>
+		{
+			Assert.Equal(50, param);
+		});
 
-	////	ActionTests.Invoke(() =>
-	////	{
-	////		Assert.Equal(50, param);
-	////	});
-	////}
+		ActionTests.Invoke(() =>
+		{
+			Assert.Equal(50, param);
+		});
+	}
 
 	public static void CallVirtualActionWithCapturedInt()
 	{
@@ -80,10 +80,10 @@ public static partial class ActionTests
 		});
 	}
 
-	////public static void CallActionWithCapturedThis()
-	////{
-	////	Assert.Throws<NotSupportedException>(() => new ActionHolder().CaptureThis());
-	////}
+	public static void CallActionWithCapturedThis()
+	{
+		new ActionHolder().CaptureThis();
+	}
 
 	public static void CallActionWithCapturedThisAndParams()
 	{
@@ -110,25 +110,25 @@ public static partial class ActionTests
 		new ActionHolderConstraint<IAction>().CaptureThisAndParams();
 	}
 
-	////public static void CallActionWithCapturedIntWithParamAfter()
-	////{
-	////	int param = 50;
+	public static void CallActionWithCapturedIntWithParamAfter()
+	{
+		int param = 50;
 
-	////	ActionTests.Invoke2(() =>
-	////	{
-	////		Assert.Equal(50, param);
-	////	}, 3);
-	////}
+		ActionTests.Invoke2(() =>
+		{
+			Assert.Equal(50, param);
+		}, 3);
+	}
 
-	////public static void CallActionWithCapturedIntWithParamBefore()
-	////{
-	////	int param = 50;
+	public static void CallActionWithCapturedIntWithParamBefore()
+	{
+		int param = 50;
 
-	////	ActionTests.Invoke2(3, () =>
-	////	{
-	////		Assert.Equal(50, param);
-	////	});
-	////}
+		ActionTests.Invoke2(3, () =>
+		{
+			Assert.Equal(50, param);
+		});
+	}
 
 	public static void CallActionT1WithCapturedInt()
 	{
