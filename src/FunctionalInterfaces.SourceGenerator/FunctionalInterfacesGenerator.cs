@@ -103,7 +103,7 @@ public sealed class FunctionalInterfacesGenerator : IIncrementalGenerator
 
 				LambdaExpressionSyntax lambda = (LambdaExpressionSyntax)candidates[0].Invocation.ArgumentList.Arguments[candidates[0].FunctionalInterfaces.Keys.First()].Expression;
 
-				string typeName = $"{method.Identifier}_{method.Span.Start}_{lambda.Span.Start}".Replace('<', '_').Replace('>', '_');
+				string typeName = $"{method.Identifier}_{method.Span.Start:X}_{lambda.Span.Start:X}".Replace('<', '_').Replace('>', '_');
 
 				SyntaxNode methodBody = method.Body!.TrackNodes(candidates.Select(candidate => candidate.Invocation));
 				foreach ((InvocationExpressionSyntax Invocation, IMethodSymbol Candidate, Dictionary<int, IMethodSymbol> FunctionalInterfaces) valueTuple in candidates)
@@ -323,7 +323,7 @@ public sealed class FunctionalInterfacesGenerator : IIncrementalGenerator
 
 			LambdaExpressionSyntax lambda = (LambdaExpressionSyntax)invocation.ArgumentList.Arguments[i].Expression;
 
-			typeName = $"{method.Identifier}_{method.Span.Start}_{lambda.Span.Start}".Replace('<', '_').Replace('>', '_');
+			typeName = $"{method.Identifier}_{method.Span.Start:X}_{lambda.Span.Start:X}".Replace('<', '_').Replace('>', '_');
 
 			DataFlowAnalysis? dataFlowAnalysis = semanticModel.AnalyzeDataFlow(lambda);
 
@@ -397,7 +397,7 @@ public sealed class FunctionalInterfacesGenerator : IIncrementalGenerator
 			{
 				ExpressionSyntax lambda = original.ArgumentList.Arguments[methodSymbol.Key].Expression;
 
-				string otherName = $"{method.Identifier}_{method.Span.Start}_{lambda.Span.Start}".Replace('<', '_').Replace('>', '_');
+				string otherName = $"{method.Identifier}_{method.Span.Start:X}_{lambda.Span.Start:X}".Replace('<', '_').Replace('>', '_');
 
 				invoke = invoke.ReplaceNode(invoke.ArgumentList.Arguments[methodSymbol.Key], invoke.ArgumentList.Arguments[methodSymbol.Key].WithExpression(
 					SyntaxFactory.InvocationExpression(
