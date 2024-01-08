@@ -16,6 +16,17 @@ public static partial class ActionTests
 		});
 	}
 
+	public static void CallGenericActionWithCapturedInt()
+	{
+		int param = 50;
+
+		ActionTests.InvokeGeneric(value =>
+		{
+			Assert.Equal(50, param);
+			Assert.Equal(40, value);
+		}, 40);
+	}
+
 	public static void CallActionWithCapturedIntReferenceOutside()
 	{
 		int param = 50;
@@ -250,6 +261,10 @@ public static partial class ActionTests
 		where T : IAction
 		=> action.Invoke();
 
+	private static void InvokeGeneric<TAction, TValue>(TAction action, TValue value)
+		where TAction : IGenericAction<TValue>
+		=> action.Invoke(value);
+
 	private static void Invoke2<T>(T action, int param)
 		where T : IAction
 	{
@@ -283,6 +298,11 @@ public static partial class ActionTests
 		public void Invoke();
 	}
 
+	private interface IGenericAction<T>
+	{
+		public void Invoke(T value);
+	}
+
 	private interface IActionT1
 	{
 		public void Invoke(int x);
@@ -310,6 +330,7 @@ public static partial class ActionTests
 	}
 
 	private static void Invoke(Action action) => throw new NotSupportedException();
+	private static void InvokeGeneric<T>(Action<T> action, T value) => throw new NotSupportedException();
 	private static void Invoke2(Action action, int param) => throw new NotSupportedException();
 	private static void Invoke2(int param, Action action) => throw new NotSupportedException();
 	private static void InvokeT1(Action<int> action) => throw new NotSupportedException();

@@ -18,6 +18,20 @@ public static partial class FuncTests
 		Assert.Equal(40, result);
 	}
 
+	public static void CallGenericFuncWithCapturedInt()
+	{
+		int param = 50;
+
+		int result = FuncTests.InvokeGeneric(() =>
+		{
+			Assert.Equal(50, param);
+
+			return 40;
+		});
+
+		Assert.Equal(40, result);
+	}
+
 	public static void CallFuncT1WithCapturedInt()
 	{
 		int param = 50;
@@ -29,6 +43,36 @@ public static partial class FuncTests
 
 			return 40;
 		});
+
+		Assert.Equal(40, result);
+	}
+
+	public static void CallGenericFuncT1WithCapturedInt()
+	{
+		int param = 50;
+
+		int result = FuncTests.InvokeGenericT1(value =>
+		{
+			Assert.Equal(50, param);
+			Assert.Equal(30, value);
+
+			return 40;
+		}, 30);
+
+		Assert.Equal(40, result);
+	}
+
+	public static void CallGenericFuncT1AsyncWithCapturedInt()
+	{
+		int param = 50;
+
+		int result = FuncTests.InvokeGenericT1Async(value =>
+		{
+			Assert.Equal(50, param);
+			Assert.Equal(30, value);
+
+			return 40;
+		}, 30).GetAwaiter().GetResult();
 
 		Assert.Equal(40, result);
 	}
@@ -55,6 +99,24 @@ public static partial class FuncTests
 		return action.Invoke();
 	}
 
+	private static TReturn InvokeGeneric<TAction, TReturn>(TAction action)
+		where TAction : IGenericAction<TReturn>
+	{
+		return action.Invoke();
+	}
+
+	private static TReturn InvokeGenericT1<TAction, TReturn>(TAction action, int value)
+		where TAction : IGenericActionT1<TReturn>
+	{
+		return action.Invoke(value);
+	}
+
+	private static ValueTask<TReturn> InvokeGenericT1Async<TAction, TReturn>(TAction action, int value)
+		where TAction : IGenericActionT1<TReturn>
+	{
+		return ValueTask.FromResult(action.Invoke(value));
+	}
+
 	private static int InvokeT1<T>(T action)
 		where T : IActionT1
 	{
@@ -72,6 +134,16 @@ public static partial class FuncTests
 		public int Invoke();
 	}
 
+	private interface IGenericAction<T>
+	{
+		public T Invoke();
+	}
+
+	private interface IGenericActionT1<T>
+	{
+		public T Invoke(int value);
+	}
+
 	private interface IActionT1
 	{
 		public int Invoke(int x);
@@ -83,6 +155,9 @@ public static partial class FuncTests
 	}
 
 	private static int Invoke(Func<int> action) => throw new NotSupportedException();
+	private static int InvokeGeneric<T>(Func<T> action) => throw new NotSupportedException();
+	private static int InvokeGenericT1<T>(Func<int, T> action, int value) => throw new NotSupportedException();
+	private static ValueTask<T> InvokeGenericT1Async<T>(Func<int, T> action, int value) => throw new NotSupportedException();
 	private static int InvokeT1(Func<int, int> action) => throw new NotSupportedException();
 	private static int InvokeT2(Func<int, int, int> action) => throw new NotSupportedException();
 }

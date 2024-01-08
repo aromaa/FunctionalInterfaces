@@ -258,6 +258,11 @@ public sealed class FunctionalInterfacesGenerator : IIncrementalGenerator
 				IParameterSymbol targetParameter = invocationTarget.Parameters[i];
 				if (!candidateParams.Contains(i))
 				{
+					if (candidateParameter.Type is ITypeParameterSymbol)
+					{
+						continue;
+					}
+
 					if (!SymbolEqualityComparer.Default.Equals(candidateParameter.Type, targetParameter.Type))
 					{
 						goto CONTINUE;
@@ -323,12 +328,48 @@ public sealed class FunctionalInterfacesGenerator : IIncrementalGenerator
 
 			LambdaExpressionSyntax lambda = (LambdaExpressionSyntax)invocation.ArgumentList.Arguments[i].Expression;
 
+			ITypeSymbol returnType = candidateTarget.ReturnType;
+			INamedTypeSymbol containingSymbol = candidateTarget.ContainingType;
+			if (containingSymbol.IsGenericType)
+			{
+				ITypeSymbol[] resolvedGenerics = containingSymbol.TypeArguments.ToArray();
+
+				SymbolInfo lambdaSymbolInfo = semanticModel.GetSymbolInfo(lambda);
+				if (lambdaSymbolInfo.Symbol is IMethodSymbol lambdaSymbol)
+				{
+					if (returnType is ITypeParameterSymbol returnTypeParameter)
+					{
+						int parameterIndex = containingSymbol.TypeArguments.IndexOf(returnTypeParameter);
+						if (parameterIndex != -1)
+						{
+							resolvedGenerics[parameterIndex] = returnType = lambdaSymbol.ReturnType;
+						}
+					}
+
+					for (int j = 0; j < candidateTarget.Parameters.Length; j++)
+					{
+						IParameterSymbol parameter = candidateTarget.Parameters[j];
+						if (parameter.Type is ITypeParameterSymbol parameterType)
+						{
+							int parameterIndex = containingSymbol.TypeArguments.IndexOf(parameterType);
+							if (parameterIndex != -1)
+							{
+								resolvedGenerics[parameterIndex] = lambdaSymbol.Parameters[j].Type;
+							}
+						}
+					}
+				}
+
+				containingSymbol = containingSymbol.OriginalDefinition.Construct(resolvedGenerics);
+				candidateTarget = (IMethodSymbol)containingSymbol.GetMembers(candidateTarget.Name).Single();
+			}
+
 			typeName = $"{method.Identifier}_{method.Span.Start:X}_{lambda.Span.Start:X}".Replace('<', '_').Replace('>', '_');
 
 			DataFlowAnalysis? dataFlowAnalysis = semanticModel.AnalyzeDataFlow(lambda);
 
 			//TODO: Auto layout?
-			writer.WriteLine($"private struct {typeName} : {candidateTarget.ContainingType}");
+			writer.WriteLine($"private struct {typeName} : {containingSymbol}");
 			writer.WriteLine("{");
 			writer.Indent++;
 
@@ -355,7 +396,7 @@ public sealed class FunctionalInterfacesGenerator : IIncrementalGenerator
 			}
 
 			writer.WriteLine();
-			writer.WriteLine($"public {(lambda.AsyncKeyword != default ? "async " : string.Empty)}{candidateTarget.ReturnType} {candidateTarget.Name}({string.Join(", ", candidateTarget.Parameters)})");
+			writer.WriteLine($"public {(lambda.AsyncKeyword != default ? "async " : string.Empty)}{returnType} {candidateTarget.Name}({string.Join(", ", candidateTarget.Parameters)})");
 
 			SyntaxNode lambdaBody = lambda.Body.ReplaceNodes(lambda.Body.DescendantNodes(), (original, modified) =>
 			{
@@ -387,19 +428,53 @@ public sealed class FunctionalInterfacesGenerator : IIncrementalGenerator
 				return invoke;
 			}
 
-			(IMethodSymbol? candidateSymbol, Dictionary<int, IMethodSymbol> functionalInterfaces) = FunctionalInterfacesGenerator.FindFunctionalInterfaceTarget(semanticModel, (InvocationExpressionSyntax)original);
+			(IMethodSymbol? candidateSymbol, Dictionary<int, IMethodSymbol> functionalInterfaces) = FunctionalInterfacesGenerator.FindFunctionalInterfaceTarget(semanticModel, original);
 			if (candidateSymbol is null)
 			{
 				return invoke;
 			}
 
-			foreach (KeyValuePair<int, IMethodSymbol> methodSymbol in functionalInterfaces)
+			string[] resolvedGenerics = new string[candidateSymbol.TypeParameters.Length];
+			foreach (KeyValuePair<int, IMethodSymbol> kvp in functionalInterfaces)
 			{
-				ExpressionSyntax lambda = original.ArgumentList.Arguments[methodSymbol.Key].Expression;
+				(int i, IMethodSymbol candidateTarget) = (kvp.Key, kvp.Value);
+
+				ExpressionSyntax lambda = original.ArgumentList.Arguments[i].Expression;
+
+				SymbolInfo lambdaSymbolInfo = semanticModel.GetSymbolInfo(lambda);
+				if (lambdaSymbolInfo.Symbol is IMethodSymbol lambdaSymbol)
+				{
+					if (candidateTarget.ReturnType is ITypeParameterSymbol returnTypeParameter)
+					{
+						int parameterIndex = candidateSymbol.TypeParameters.IndexOf(returnTypeParameter);
+						if (parameterIndex != -1)
+						{
+							resolvedGenerics[parameterIndex] = lambdaSymbol.ReturnType.ToString();
+						}
+					}
+
+					for (int j = 0; j < candidateTarget.Parameters.Length; j++)
+					{
+						IParameterSymbol parameter = candidateTarget.Parameters[j];
+						if (parameter.Type is ITypeParameterSymbol parameterType)
+						{
+							int parameterIndex = candidateSymbol.TypeParameters.IndexOf(parameterType);
+							if (parameterIndex != -1)
+							{
+								resolvedGenerics[parameterIndex] = lambdaSymbol.Parameters[j].Type.ToString();
+							}
+						}
+					}
+				}
 
 				string otherName = $"{method.Identifier}_{method.Span.Start:X}_{lambda.Span.Start:X}".Replace('<', '_').Replace('>', '_');
 
-				invoke = invoke.ReplaceNode(invoke.ArgumentList.Arguments[methodSymbol.Key], invoke.ArgumentList.Arguments[methodSymbol.Key].WithExpression(
+				if (candidate.Parameters[i].Type is ITypeParameterSymbol parameterTypeParameter)
+				{
+					resolvedGenerics[candidate.TypeParameters.IndexOf(parameterTypeParameter)] = otherName;
+				}
+
+				invoke = invoke.ReplaceNode(invoke.ArgumentList.Arguments[i], invoke.ArgumentList.Arguments[i].WithExpression(
 					SyntaxFactory.InvocationExpression(
 							SyntaxFactory.MemberAccessExpression(
 								SyntaxKind.SimpleMemberAccessExpression,
@@ -432,6 +507,20 @@ public sealed class FunctionalInterfacesGenerator : IIncrementalGenerator
 												: SyntaxFactory.ThisExpression())
 										.WithRefOrOutKeyword(
 											SyntaxFactory.Token(SyntaxKind.RefKeyword)))))));
+			}
+
+			GenericNameSyntax newInvokeTarget = SyntaxFactory.GenericName(invokeTarget.Name)
+				.WithTypeArgumentList(SyntaxFactory.TypeArgumentList(
+					SyntaxFactory.SeparatedList<TypeSyntax>(
+						resolvedGenerics.Select(SyntaxFactory.IdentifierName))));
+
+			if (invoke.Expression is MemberAccessExpressionSyntax memberAccess)
+			{
+				return invoke.WithExpression(memberAccess.WithName(newInvokeTarget));
+			}
+			else
+			{
+				invoke.WithExpression(newInvokeTarget);
 			}
 
 			return invoke;
