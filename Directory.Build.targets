@@ -1,0 +1,12 @@
+<Project>
+
+	<PropertyGroup>
+		<PackageVersion>$(Version)</PackageVersion>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+		<PackageVersion>$(Version).$(GITHUB_RUN_ID)</PackageVersion>
+		<PackageVersion Condition="'$(GITHUB_SHA)' != ''">$(PackageVersion)+$(GITHUB_SHA)</PackageVersion>
+	</PropertyGroup>
+
+</Project>

@@ -7,11 +7,12 @@
 		<IncludeBuildOutput>false</IncludeBuildOutput>
 		<NoPackageAnalysis>true</NoPackageAnalysis>
 		<DisableFody>true</DisableFody>
-		<Version>1.0.0</Version>
+		<VersionPrefix>1.0.0</VersionPrefix>
 		<Authors>Joni Aromaa</Authors>
 		<Description>
 			Create zero allocation capturing struct lambdas!
 		</Description>
+		<RepositoryUrl>https://github.com/aromaa/FunctionalInterfaces</RepositoryUrl>
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -23,3 +23,37 @@ jobs:
       run: dotnet build --no-restore /p:EnforceCodeStyleInBuild=true /p:EnableWindowsTargeting=true
     - name: Test
       run: dotnet test --no-build --verbosity normal
+
+  build-packages:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.x
+    - name: Build package
+      run: dotnet build src\FunctionalInterfaces\FunctionalInterfaces.csproj -c Release
+    - name: Upload package artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: Packages
+        path: src\FunctionalInterfaces\bin\Release\*.nupkg
+        if-no-files-found: error
+
+  publish-github:
+    needs: [build, build-packages]
+    runs-on: ubuntu-latest
+    if: ${{github.event_name == 'push'}}
+    steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.x
+    - uses: actions/download-artifact@v3
+      with:
+        name: Packages
+        path: artifacts
+    - run: dotnet nuget push "artifacts\*.nupkg" --source "https://nuget.pkg.github.com/${{github.repository_owner}}/index.json" --api-key ${{secrets.GITHUB_TOKEN}}

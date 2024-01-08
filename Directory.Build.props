@@ -5,6 +5,7 @@
 		<NoWarn>$(NoWarn),1573,1591,1712,8500</NoWarn>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<Features>strict</Features>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(BuildingInsideVisualStudio)' != 'true'">
@@ -14,6 +15,16 @@
 	<ItemGroup>
 		<EditorConfigFiles Include="$(MSBuildThisFileDirectory)CodeAnalysis.globalconfig" />
 		<PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.507" PrivateAssets="all" />
+	</ItemGroup>
+
+	<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+		<ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+		<VersionSuffix>alpha</VersionSuffix>
+		<VersionSuffix Condition="'$(GITHUB_EVENT_NAME)' == 'pull_request'">pr</VersionSuffix>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<SourceRoot Include="$(MSBuildThisFileDirectory)/"/>
 	</ItemGroup>
 
 </Project>
