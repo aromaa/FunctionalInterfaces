@@ -345,6 +345,23 @@ public sealed class FunctionalInterfacesGenerator : IIncrementalGenerator
 							resolvedGenerics[parameterIndex] = returnType = lambdaSymbol.ReturnType;
 						}
 					}
+					else if (returnType is INamedTypeSymbol { IsGenericType: true } returnTypeSymbol)
+					{
+						for (int j = 0; j < returnTypeSymbol.TypeArguments.Length; j++)
+						{
+							ITypeSymbol typeArgument = returnTypeSymbol.TypeArguments[j];
+							if (typeArgument is ITypeParameterSymbol typeParameter)
+							{
+								int parameterIndex = containingSymbol.TypeArguments.IndexOf(typeParameter);
+								if (parameterIndex != -1)
+								{
+									resolvedGenerics[parameterIndex] = ((INamedTypeSymbol)lambdaSymbol.ReturnType).TypeArguments[j];
+								}
+							}
+						}
+
+						returnType = lambdaSymbol.ReturnType;
+					}
 
 					for (int j = 0; j < candidateTarget.Parameters.Length; j++)
 					{
@@ -450,6 +467,21 @@ public sealed class FunctionalInterfacesGenerator : IIncrementalGenerator
 						if (parameterIndex != -1)
 						{
 							resolvedGenerics[parameterIndex] = lambdaSymbol.ReturnType.ToString();
+						}
+					}
+					else if (candidateTarget.ReturnType is INamedTypeSymbol { IsGenericType: true } returnTypeSymbol)
+					{
+						for (int j = 0; j < returnTypeSymbol.TypeArguments.Length; j++)
+						{
+							ITypeSymbol typeArgument = returnTypeSymbol.TypeArguments[j];
+							if (typeArgument is ITypeParameterSymbol typeParameter)
+							{
+								int parameterIndex = candidateSymbol.TypeParameters.IndexOf(typeParameter);
+								if (parameterIndex != -1)
+								{
+									resolvedGenerics[parameterIndex] = ((INamedTypeSymbol)lambdaSymbol.ReturnType).TypeArguments[j].ToString();
+								}
+							}
 						}
 					}
 
