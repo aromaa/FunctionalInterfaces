@@ -133,12 +133,19 @@ public sealed class FunctionalInterfacesGenerator : IIncrementalGenerator
 							}
 							else if (modified is IdentifierNameSyntax { Parent: not MemberAccessExpressionSyntax { Expression: IdentifierNameSyntax { Identifier.Text: "__functionalInterface" } } } identifier)
 							{
-								bool captured = dataFlowAnalysis.Captured.Any(i => i.Name == identifier.Identifier.Text);
-								if (captured)
+								ISymbol? captured = dataFlowAnalysis.Captured.SingleOrDefault(i => i is ILocalSymbol && i.Name == identifier.Identifier.Text);
+								if (captured is not null)
 								{
-									return SyntaxFactory.MemberAccessExpression(
-										SyntaxKind.SimpleMemberAccessExpression,
-										SyntaxFactory.IdentifierName("__functionalInterface"), identifier);
+									foreach (SyntaxReference reference in captured.DeclaringSyntaxReferences)
+									{
+										SyntaxNode declaration = reference.GetSyntax();
+										if (declaration is VariableDeclaratorSyntax)
+										{
+											return SyntaxFactory.MemberAccessExpression(
+												SyntaxKind.SimpleMemberAccessExpression,
+												SyntaxFactory.IdentifierName("__functionalInterface"), identifier);
+										}
+									}
 								}
 							}
 

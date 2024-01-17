@@ -31,7 +31,7 @@ public static partial class ActionTests
 	{
 		int param = 50;
 
-		_ = param;
+		Assert.Equal(50, param);
 
 		ActionTests.Invoke(() =>
 		{
@@ -53,6 +53,26 @@ public static partial class ActionTests
 			Assert.Equal(50, param);
 		});
 	}
+
+	public static void CallActionWithComplexCaptureAssignment()
+	{
+		DataHolder param = new(50);
+		if (param.Data is not int intParam)
+		{
+			Assert.Fail("Unreachable");
+
+			return;
+		}
+
+		Assert.Equal(50, intParam);
+
+		ActionTests.Invoke(() =>
+		{
+			Assert.Equal(50, intParam);
+		});
+	}
+
+	private sealed record DataHolder(object Data);
 
 	public static void CallVirtualActionWithCapturedInt()
 	{
