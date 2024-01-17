@@ -18,6 +18,28 @@ public static partial class FuncTests
 		Assert.Equal(40, result);
 	}
 
+	public static void CallFuncWithComplexCaptureAssignment()
+	{
+		DataHolder param = new(50);
+		if (param.Data is not int intParam)
+		{
+			Assert.Fail("Unreachable");
+
+			return;
+		}
+
+		int result = FuncTests.Invoke(() =>
+		{
+			Assert.Equal(50, intParam);
+
+			return 40;
+		});
+
+		Assert.Equal(40, result);
+	}
+
+	private sealed record DataHolder(object Data);
+
 	public static void CallGenericFuncWithCapturedInt()
 	{
 		int param = 50;

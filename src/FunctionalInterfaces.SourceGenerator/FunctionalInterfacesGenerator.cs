@@ -155,7 +155,16 @@ public sealed class FunctionalInterfacesGenerator : IIncrementalGenerator
 
 					if (methodBody.GetCurrentNode(valueTuple.Invocation) is { } currentNode)
 					{
-						if (dataFlowAnalysis is not null && currentNode.Parent is ExpressionStatementSyntax expression)
+						SyntaxNode? expression = null;
+						for (SyntaxNode? node = currentNode.Parent; node != null; node = node.Parent)
+						{
+							if (node is ExpressionStatementSyntax or LocalDeclarationStatementSyntax)
+							{
+								expression = node;
+							}
+						}
+
+						if (dataFlowAnalysis is not null && expression is not null)
 						{
 							List<ExpressionStatementSyntax> initVariables = new();
 							foreach (ISymbol symbol in dataFlowAnalysis.DataFlowsIn)
